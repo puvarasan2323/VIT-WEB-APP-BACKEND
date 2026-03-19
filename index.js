@@ -16,9 +16,12 @@ const firebaseConfig = {
 
 // Initialize Firebase Admin using Environment Variables
 try {
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY 
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') 
-    : null;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  
+  if (privateKey) {
+    // Remove potential surrounding quotes and handle escaped newlines
+    privateKey = privateKey.replace(/^"(.*)"$/, '$1').replace(/\\n/g, '\n');
+  }
 
   if (process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
     admin.initializeApp({
