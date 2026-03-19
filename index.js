@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
@@ -9,23 +10,36 @@ const PORT = process.env.PORT || 5001;
 
 // Firebase configuration (from Python backend)
 const firebaseConfig = {
-  apiKey: "AIzaSyDFXKnP194gyar2DwnI0EIvizFAS-cRdQA",
-  projectId: "vit-web-app-e5cd5",
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyDFXKnP194gyar2DwnI0EIvizFAS-cRdQA",
+  projectId: process.env.FIREBASE_PROJECT_ID || "vit-web-app-e5cd5",
 };
 
-// Initialize Firebase Admin
-const SERVICE_ACCOUNT_PATH = path.join(__dirname, 'serviceAccountKey.json');
+// Initialize Firebase Admin using Environment Variables
 try {
-  const serviceAccount = require(SERVICE_ACCOUNT_PATH);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-  console.log("Firebase Admin initialized.");
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY 
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') 
+    : null;
+
+  if (process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: privateKey,
+      })
+    });
+    console.log("Firebase Admin initialized from environment variables.");
+  } else {
+    // Fallback for local development if file exists
+    const SERVICE_ACCOUNT_PATH = path.join(__dirname, 'serviceAccountKey.json');
+    const serviceAccount = require(SERVICE_ACCOUNT_PATH);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("Firebase Admin initialized from serviceAccountKey.json.");
+  }
 } catch (err) {
-  console.warn("!" + "!".repeat(60));
-  console.warn("WARNING: serviceAccountKey.json NOT FOUND in backend-node/ directory.");
-  console.warn("Firestore and Auth verification will FAIL until this file is added.");
-  console.warn("!" + "!".repeat(60));
+  console.error("Firebase initialization failed:", err.message);
 }
 
 const db = admin.firestore();
